@@ -171,6 +171,7 @@ class DistributedServer:
         try:
             self.server_socket.bind((self.host, self.port))
             self.server_socket.listen(128)
+            self.server_socket.settimeout(1.0)  # Permite responder a Ctrl+C en Windows
             self.is_running = True
             logger.info("=" * 68)
             logger.info(f" Servidor Distribuido iniciado en {self.host}:{self.port}")
@@ -181,18 +182,21 @@ class DistributedServer:
             while self.is_running:
                 try:
                     client_sock, client_addr = self.server_socket.accept()
-                    client_handler = threading.Thread(
-                        target=self.handle_client,
-                        args=(client_sock, client_addr),
-                        daemon=True,
-                        name=f"ClientHandler-{client_addr[1]}"
-                    )
-                    client_handler.start()
-                except socket.error:
+                except socket.timeout:
+                    continue
+                except (socket.error, OSError):
                     break
 
+                client_handler = threading.Thread(
+                    target=self.handle_client,
+                    args=(client_sock, client_addr),
+                    daemon=True,
+                    name=f"ClientHandler-{client_addr[1]}"
+                )
+                client_handler.start()
+
         except KeyboardInterrupt:
-            logger.info("Solicitud de detención recibida (Ctrl+C)...")
+            logger.info("Solicitud de detencion recibida (Ctrl+C)...")
         finally:
             self.stop()
 
