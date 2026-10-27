@@ -9,7 +9,7 @@ from src.common.constants import STATUS_SUCCESS
 def print_result_card(res: dict):
     """Muestra el resultado con formato visual legible y estructurado."""
     status = res.get("status", "UNKNOWN")
-    symbol = "✓" if status == STATUS_SUCCESS else "✗"
+    symbol = "OK" if status == STATUS_SUCCESS else "ERROR"
     print("\n" + "-" * 60)
     print(f"[{symbol}] Tarea ID:     {res.get('task_id')} | Tipo: {res.get('task_type')}")
     print(f"    Estado:       {status}")
@@ -27,16 +27,16 @@ def print_result_card(res: dict):
 def run_demo_suite(client: DistributedClient):
     """Ejecuta una batería de tareas representativas para probar el sistema distribuido."""
     print("\n" + "=" * 60)
-    print(" 🚀 INICIANDO DEMOSTRACIÓN DE TAREAS DISTRIBUIDAS")
+    print(" [*] INICIANDO DEMOSTRACION DE TAREAS DISTRIBUIDAS")
     print("=" * 60)
 
     test_tasks = [
-        ("PRIME_CHECK", {"number": 104729}, "Comprobación de número primo grande"),
-        ("FACTORIAL", {"number": 500}, "Cálculo de factorial (500!)"),
-        ("HASH_DATA", {"text": "Sistemas Distribuidos PFO 3 - Cliente/Servidor Sockets", "algorithm": "sha256"}, "Hash criptográfico SHA-256"),
-        ("WORD_COUNT", {"text": "Nginx RabbitMQ PostgreSQL S3 Workers Pool Hilos Python Sockets"}, "Conteo y análisis de palabras"),
-        ("SIMULATE_PROCESSING", {"duration": 1.2, "label": "Procesamiento de imagen simulado"}, "Simulación I/O intensivo con retardo"),
-        ("PRIME_CHECK", {"number": 999999999989}, "Primo de 12 dígitos"),
+        ("PRIME_CHECK", {"number": 104729}, "Comprobacion de numero primo grande"),
+        ("FACTORIAL", {"number": 500}, "Calculo de factorial (500!)"),
+        ("HASH_DATA", {"text": "Sistemas Distribuidos PFO 3 - Cliente/Servidor Sockets", "algorithm": "sha256"}, "Hash criptografico SHA-256"),
+        ("WORD_COUNT", {"text": "Nginx RabbitMQ PostgreSQL S3 Workers Pool Hilos Python Sockets"}, "Conteo y analisis de palabras"),
+        ("SIMULATE_PROCESSING", {"duration": 1.2, "label": "Procesamiento de imagen simulado"}, "Simulacion I/O intensivo con retardo"),
+        ("PRIME_CHECK", {"number": 999999999989}, "Primo de 12 digitos"),
     ]
 
     for task_type, params, desc in test_tasks:
@@ -50,12 +50,12 @@ def run_demo_suite(client: DistributedClient):
     status = client.get_server_status()
     if status:
         print("\n" + "=" * 60)
-        print(" 📊 RESUMEN DE MÉTRICAS DEL SERVIDOR:")
-        print(f"    • Estado:              {status.get('status')}")
-        print(f"    • Host / Puerto:       {status.get('host')}:{status.get('port')}")
-        print(f"    • Workers en Pool:     {status.get('max_workers')}")
-        print(f"    • Tareas completadas:  {status.get('tasks_completed')}")
-        print(f"    • Tareas fallidas:     {status.get('tasks_failed')}")
+        print(" [+] RESUMEN DE METRICAS DEL SERVIDOR:")
+        print(f"    - Estado:              {status.get('status')}")
+        print(f"    - Host / Puerto:       {status.get('host')}:{status.get('port')}")
+        print(f"    - Workers en Pool:     {status.get('max_workers')}")
+        print(f"    - Tareas completadas:  {status.get('tasks_completed')}")
+        print(f"    - Tareas fallidas:     {status.get('tasks_failed')}")
         print("=" * 60)
 
 
