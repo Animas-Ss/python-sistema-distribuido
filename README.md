@@ -1,12 +1,25 @@
-# PFO 3: Rediseño como Sistema Distribuido (Cliente-Servidor)
+# 🌐 Sistema Distribuido con Sockets y Worker Pool (PFO 3)
 
-Este repositorio contiene la solución completa para la **Práctica Formativa Obligatoria 3 (PFO 3)**, orientada al diseño e implementación de un sistema con arquitectura distribuida basada en sockets TCP y componentes empresariales de alta disponibilidad.
+[![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Architecture](https://img.shields.io/badge/architecture-Client--Server-orange.svg)](#1-diagrama-del-sistema-distribuido)
+[![Docs](https://img.shields.io/badge/docs-Guía%20de%20Aprendizaje-purple.svg)](GUIA_APRENDIZAJE.md)
+
+Este repositorio contiene la solución profesional completa para la **Práctica Formativa Obligatoria 3 (PFO 3)**, orientada al rediseño y construcción de un sistema con arquitectura distribuida basada en **Sockets TCP**, **Pool de Hilos (Workers)**, y los patrones empresariales de alta disponibilidad requeridos.
+
+> 📚 **¿Quieres aprender cómo funciona el código paso a paso?**  
+> Consulta la [**Guía de Aprendizaje Paso a Paso (GUIA_APRENDIZAJE.md)**](GUIA_APRENDIZAJE.md), un documento didáctico completo con teoría de redes, framing TCP, análisis línea por línea y conceptos para examen.
 
 ---
 
 ## 1. Diagrama del Sistema Distribuido
 
-A continuación se presenta el diagrama arquitectónico completo que articula todos los componentes solicitados en la consigna:
+El diagrama incorpora todos los componentes solicitados en la consigna:
+- **Clientes:** Móviles (iOS/Android) y Web (SPA/Navegadores).
+- **Balanceador de Carga:** Nginx / HAProxy con balanceo *Round-Robin/Least Connections* y terminación SSL.
+- **Servidores Workers:** Nodos de procesamiento concurrentes, cada uno con su respectivo **Pool de Hilos** (`ThreadPoolExecutor`).
+- **Cola de Mensajes:** RabbitMQ para comunicación asíncrona, desacople y buffering entre servidores.
+- **Almacenamiento Distribuido:** PostgreSQL (consistencia relacional y metadatos) y Amazon S3/MinIO (objetos y payloads pesados).
 
 ```mermaid
 flowchart TD
@@ -45,8 +58,8 @@ flowchart TD
     %% Conexiones
     C1 -->|Sockets TCP / WSS| LB
     C2 -->|Sockets TCP / WSS| LB
-    LB -->|Distribución de conexiones| S1_Sock
-    LB -->|Distribución de conexiones| S2_Sock
+    LB -->|Distribución L4/L7| S1_Sock
+    LB -->|Distribución L4/L7| S2_Sock
 
     S1_Pool <-->|Eventos / Mensajes| RMQ
     S2_Pool <-->|Eventos / Mensajes| RMQ
@@ -58,106 +71,102 @@ flowchart TD
     S2_Pool -->|S3 API / REST| S3
 ```
 
-> **Archivo visual en alta resolución:** También se incluye en la raíz del repositorio el archivo vectorial [`diagrama_arquitectura.svg`](./diagrama_arquitectura.svg), listo para ser abierto en cualquier navegador o exportado a documentos PDF.
+> **Archivo visual en alta resolución:** También se incluye en la carpeta de documentación el archivo vectorial [`docs/diagrama_arquitectura.svg`](docs/diagrama_arquitectura.svg).
 
 ---
 
-## 2. Descripción de los Componentes del Sistema
+## 2. Descripción de los Componentes
 
 | Componente | Rol en el Sistema | Justificación de Diseño |
 | :--- | :--- | :--- |
-| **Clientes (Móviles / Web)** | Puntos de contacto donde los usuarios generan solicitudes de cálculo, análisis de datos o procesamiento. | Se conectan mediante sockets TCP / WebSockets para una comunicación bidireccional y de baja latencia en tiempo real. |
-| **Balanceador de Carga (Nginx / HAProxy)** | Punto único de entrada inverso (Reverse Proxy & Load Balancer) a nivel L4 (TCP stream) o L7 (HTTP/WS). | Evita el colapso de un único servidor, distribuye el tráfico usando algoritmos como *Least Connections* y aísla fallos de nodos caídos mediante *Health Checks*. |
-| **Servidores Workers (Python + ThreadPool)** | Nodos backend que reciben los sockets de clientes y despachan la carga a un **Pool de Hilos de ejecución concurrente**. | Permite atender múltiples peticiones en paralelo sin bloquear el loop de escucha del socket, aprovechando núcleos del procesador y concurrencia I/O. |
-| **Cola de Mensajes (RabbitMQ)** | Broker de mensajería para comunicación desacoplada y asíncrona entre servidores. | Garantiza que ninguna tarea se pierda ante picos de demanda (*buffering*), permite el patrón *Publish/Subscribe* y reintentos ante caídas mediante *Dead Letter Queues*. |
-| **PostgreSQL** | Base de datos relacional para almacenamiento estructurado de transacciones. | Mantiene la consistencia ACID de registros críticos: usuarios, metadatos, estado de tareas (`PENDING`, `RUNNING`, `SUCCESS`, `ERROR`) y latencias. |
-| **Amazon S3 / MinIO** | Almacenamiento de objetos no estructurado y altamente escalable. | Diseñado para guardar archivos de entrada pesados, resultados voluminosos, logs de auditoría e imágenes con disponibilidad 99.999999999%. |
+| **Clientes (Móviles / Web)** | Puntos de contacto donde los usuarios generan solicitudes de cálculo o procesamiento. | Se conectan mediante sockets TCP / WebSockets para una comunicación bidireccional y de baja latencia en tiempo real. |
+| **Balanceador de Carga (Nginx / HAProxy)** | Punto único de entrada inverso (*Reverse Proxy*) a nivel L4 o L7. | Evita el colapso de un único servidor, distribuye el tráfico y aísla caídas mediante *Health Checks*. |
+| **Servidores Workers (Python + ThreadPool)** | Nodos backend que reciben los sockets y delegan las tareas a un **Pool de Hilos concurrentes**. | Permite atender múltiples peticiones en paralelo sin bloquear el socket principal. |
+| **Cola de Mensajes (RabbitMQ)** | Broker de mensajería para comunicación desacoplada y asíncrona. | Garantiza que ninguna tarea se pierda ante picos de demanda (*buffering*) y permite reintentos (*DLQ*). |
+| **PostgreSQL** | Base de datos relacional transaccional. | Mantiene la consistencia ACID de registros críticos: usuarios, metadatos, estado de tareas y latencias. |
+| **Amazon S3 / MinIO** | Almacenamiento de objetos no estructurado y altamente escalable. | Guarda archivos de entrada pesados, resultados voluminosos y logs con disponibilidad 99.999999999%. |
 
 ---
 
-## 3. Implementación en Python
+## 3. Estructura Profesional del Proyecto
 
-El código implementa el núcleo funcional del sistema distribuido utilizando la librería estándar de Python (`socket`, `concurrent.futures`, `struct`, `json`):
+El código está organizado siguiendo las mejores prácticas de modularización en Python:
 
-### Estructura de Archivos
-- **[`protocol.py`](./protocol.py)**: Define el protocolo de comunicación sobre TCP. Utiliza un encabezado binario de 4 bytes (*big-endian*) que precede al payload JSON, evitando errores clásicos de sockets como *packet fragmentation* o *sticky packets*.
-- **[`server.py`](./server.py)**: Servidor socket TCP multihilo. Escucha conexiones entrantes, asigna cada cliente a un gestor y delega las tareas a un `ThreadPoolExecutor` (pool de workers concurrentes). Registra métricas y gestiona cierres limpios.
-- **[`client.py`](./client.py)**: Cliente socket con doble modalidad: **interactiva** (menú CLI) y **suite de demo automática** para validar la respuesta inmediata del servidor y los workers.
-- **[`test_system.py`](./test_system.py)**: Suite de tests automatizados (`unittest`) que valida la concurrencia real entre múltiples clientes, el uso efectivo de distintos hilos del pool y el manejo de errores.
+```text
+python-sistema-distribuido/
+├── src/                          # Código fuente del sistema
+│   ├── common/                   # Componentes compartidos
+│   │   ├── __init__.py
+│   │   ├── protocol.py           # Framing TCP con prefijo de 4 bytes y JSON
+│   │   └── constants.py          # Constantes globales y tipos de acción
+│   ├── server/                   # Lógica del Servidor
+│   │   ├── __init__.py
+│   │   ├── server.py             # Clase DistributedServer y ThreadPoolExecutor
+│   │   └── tasks.py              # Procesador de tareas (Primos, Factorial, Hashing, etc.)
+│   └── client/                   # Lógica del Cliente
+│       ├── __init__.py
+│       ├── client.py             # Clase DistributedClient y gestión de sockets
+│       └── cli.py                # Interfaz CLI interactiva y suite de demo
+├── tests/                        # Suite de pruebas automatizadas
+│   ├── __init__.py
+│   └── test_system.py            # Tests de integración, concurrencia y errores
+├── docs/                         # Documentación y diagramas
+│   └── diagrama_arquitectura.svg # Diagrama vectorial SVG del sistema
+├── run_server.py                 # Punto de entrada para el Servidor
+├── run_client.py                 # Punto de entrada para el Cliente
+├── README.md                     # Documentación principal
+├── GUIA_APRENDIZAJE.md           # Guía de estudio y tutorial paso a paso
+└── .gitignore                    # Reglas de exclusión de Git
+```
 
 ---
 
-## 4. Requisitos y Ejecución
+## 4. Guía de Ejecución Rápida
 
 ### Requisitos
-- Python 3.8 o superior (se probó con Python 3.10+ / 3.14).
-- No requiere dependencias externas (`pip install` no es necesario; se utilizó la biblioteca estándar para máxima portabilidad).
+- Python 3.8 o superior.
+- No requiere dependencias de terceros (`pip`), utiliza exclusivamente la biblioteca estándar de Python.
 
 ### Paso 1: Iniciar el Servidor
-Abra una terminal y ejecute:
+En una terminal:
 ```bash
-python server.py --host 127.0.0.1 --port 5000 --workers 5
+python run_server.py --host 127.0.0.1 --port 5000 --workers 5
 ```
-Parámetros opcionales:
-- `--host`: Dirección IP de escucha (por defecto `127.0.0.1`).
-- `--port`: Puerto de escucha (por defecto `5000`).
-- `--workers`: Cantidad de hilos en el worker pool (por defecto `5`).
+> O alternativamente: `python server.py`
 
-### Paso 2: Ejecutar el Cliente
+### Paso 2: Ejecutar el Cliente (en otra terminal)
 
-#### Modo Demostración Automática (Recomendado para testing rápido):
-En otra terminal, ejecute:
+#### Opción A: Modo Demostración Automática (Recomendado)
+Ejecuta automáticamente una batería completa de pruebas heterogéneas y muestra las métricas del pool:
 ```bash
-python client.py --demo
+python run_client.py --demo
 ```
-Este modo enviará automáticamente una batería de tareas heterogéneas (números primos, factoriales, hashing criptográfico SHA-256, conteo de palabras y simulación concurrente) y mostrará las métricas del pool de workers.
 
-#### Modo Interactivo:
+#### Opción B: Modo Interactivo por Menú
 ```bash
-python client.py
+python run_client.py
 ```
-Desplegará un menú por consola para enviar tareas a demanda:
-```text
-=============================================
- SISTEMA DISTRIBUIDO - MENÚ CLIENTE
-=============================================
- 1. Verificar si un número es primo
- 2. Calcular factorial de un número
- 3. Generar hash criptográfico (SHA-256)
- 4. Contar palabras de un texto
- 5. Simular procesamiento con delay
- 6. Ver estado y métricas del servidor
- 7. Ejecutar demo automática de tareas
- 0. Salir
-=============================================
-```
+Permite ingresar manualmente tareas (verificar números primos, calcular factoriales, generar hashes SHA-256, contar palabras o simular procesamiento con retardo).
 
-### Paso 3: Ejecutar las Pruebas Automatizadas
-Para verificar el comportamiento integral y la concurrencia:
+---
+
+## 5. Pruebas Automatizadas
+
+Para ejecutar la suite de integración que valida concurrencia real entre múltiples clientes y asignación en el pool de hilos:
 ```bash
 python test_system.py
 ```
 
 ---
 
-## 5. Instrucciones para Subir al Repositorio de GitHub
+## 6. Subir al Repositorio Remoto en GitHub
 
-Para publicar esta entrega en tu cuenta de GitHub, sigue estos pasos desde la terminal dentro de esta carpeta:
+El repositorio local ya está configurado con la rama `main` y vinculado al remoto:
+- Repositorio: `https://github.com/Animas-Ss/python-sistema-distribuido.git`
 
-1. **Inicializar Git y agregar archivos:**
-   ```bash
-   git init
-   git add .
-   git commit -m "feat: implementacion inicial del sistema distribuido con sockets y worker pool (PFO 3)"
-   ```
-
-2. **Crear repositorio en GitHub:**
-   - Ingresa a [GitHub](https://github.com/new) y crea un nuevo repositorio llamado por ejemplo `python-sistema-distribuido`.
-   - Deja las opciones de inicializar con README o .gitignore desmarcadas.
-
-3. **Vincular el repositorio remoto y subir el código:**
-   ```bash
-   git branch -M main
-   git remote add origin https://github.com/TU_USUARIO/python-sistema-distribuido.git
-   git push -u origin main
-   ```
+Para enviar los cambios a GitHub:
+```bash
+git add .
+git commit -m "feat: reestructuracion profesional del sistema distribuido y guia didactica"
+git push -u origin main
+```

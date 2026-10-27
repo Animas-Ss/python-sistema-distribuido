@@ -1,0 +1,18 @@
+"""
+Constantes globales utilizadas en el sistema distribuido.
+"""
+
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 5000
+DEFAULT_WORKERS = 5
+SOCKET_TIMEOUT = 15.0
+
+# Tipos de acciones soportadas
+ACTION_EXECUTE_TASK = "EXECUTE_TASK"
+ACTION_BATCH_TASKS = "BATCH_TASKS"
+ACTION_GET_STATUS = "GET_SERVER_STATUS"
+ACTION_PING = "PING"
+
+# Estados de respuesta
+STATUS_SUCCESS = "SUCCESS"
+STATUS_ERROR = "ERROR"
