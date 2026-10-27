@@ -121,52 +121,119 @@ python-sistema-distribuido/
 
 ---
 
-## 4. Guía de Ejecución Rápida
+## 4. Guía de Instalación y Ejecución Paso a Paso
 
-### Requisitos
-- Python 3.8 o superior.
-- No requiere dependencias de terceros (`pip`), utiliza exclusivamente la biblioteca estándar de Python.
+Cualquier persona o docente que evalúe este proyecto puede descargarlo y ejecutarlo en cuestión de segundos siguiendo estos pasos:
 
-### Paso 1: Iniciar el Servidor
-En una terminal:
+### Paso 1: Clonar o Descargar el Repositorio
+Abre tu terminal (PowerShell, CMD o Bash) y clona el proyecto:
 ```bash
-python run_server.py --host 127.0.0.1 --port 5000 --workers 5
-```
-> O alternativamente: `python server.py`
-
-### Paso 2: Ejecutar el Cliente (en otra terminal)
-
-#### Opción A: Modo Demostración Automática (Recomendado)
-Ejecuta automáticamente una batería completa de pruebas heterogéneas y muestra las métricas del pool:
-```bash
-python run_client.py --demo
+git clone https://github.com/Animas-Ss/python-sistema-distribuido.git
+cd python-sistema-distribuido
 ```
 
-#### Opción B: Modo Interactivo por Menú
-```bash
-python run_client.py
-```
-Permite ingresar manualmente tareas (verificar números primos, calcular factoriales, generar hashes SHA-256, contar palabras o simular procesamiento con retardo).
+### Paso 2: Requisitos Previos
+- **Python 3.8 o superior** instalado (`python --version`).
+- **Cero dependencias externas:** No requiere `pip install` ni entornos virtuales pesados; se desarrolló íntegramente con la biblioteca estándar de Python (`socket`, `concurrent.futures`, `struct`, `json`, `threading`).
 
 ---
 
-## 5. Pruebas Automatizadas
+### Paso 3: Iniciar el Servidor (Terminal 1)
+En la primera terminal, inicia el servidor distribuido:
+```bash
+python run_server.py --port 5000 --workers 4
+```
+> *(También compatible con: `python server.py`)*
 
-Para ejecutar la suite de integración que valida concurrencia real entre múltiples clientes y asignación en el pool de hilos:
+**Salida esperada en consola:**
+```text
+2026-10-27 14:27:05 [INFO] [MainThread] ====================================================================
+2026-10-27 14:27:05 [INFO] [MainThread]  Servidor Distribuido iniciado en 127.0.0.1:5000
+2026-10-27 14:27:05 [INFO] [MainThread]  Worker Pool configurado con 4 hilos concurrentes
+2026-10-27 14:27:05 [INFO] [MainThread]  Presione Ctrl+C para detener el servidor
+2026-10-27 14:27:05 [INFO] [MainThread] ====================================================================
+```
+El servidor quedará a la espera de peticiones entrantes. Para detenerlo en cualquier momento, simplemente presiona **`Ctrl + C`**.
+
+---
+
+### Paso 4: Ejecutar el Cliente (Terminal 2)
+Abre una **segunda terminal** en la misma carpeta para interactuar con el servidor:
+
+#### Opción A: Modo Demostración Automática (Recomendado para evaluación rápida)
+Envía automáticamente un lote completo de tareas heterogéneas, midiendo tiempos de procesamiento por hilo y latencia de red (*RTT*):
+```bash
+python run_client.py --demo
+```
+> *(También compatible con: `python client.py --demo`)*
+
+**Salida esperada:**
+```text
+[+] Conectado exitosamente al servidor distribuido en 127.0.0.1:5000
+
+============================================================
+ [*] INICIANDO DEMOSTRACION DE TAREAS DISTRIBUIDAS
+============================================================
+
+[>] Enviando: Comprobacion de numero primo grande...
+------------------------------------------------------------
+[OK] Tarea ID:     task-ece352 | Tipo: PRIME_CHECK
+    Estado:       SUCCESS
+    Worker Hilo:  WorkerThread_0
+    Tiempo Proc:  0.0 s
+    Latencia RTT: 0.0013 s
+    Resultado:    {'number': 104729, 'is_prime': True}
+------------------------------------------------------------
+...
+============================================================
+ [+] RESUMEN DE METRICAS DEL SERVIDOR:
+    - Estado:              ONLINE
+    - Host / Puerto:       127.0.0.1:5000
+    - Workers en Pool:     4
+    - Tareas completadas:  6
+    - Tareas fallidas:     0
+============================================================
+[*] Conexión cerrada.
+```
+
+#### Opción B: Modo Menú Interactivo
+Si prefieres ingresar parámetros manualmente a demanda:
+```bash
+python run_client.py
+```
+Desplegará el menú interactivo:
+```text
+==================================================
+   SISTEMA DISTRIBUIDO - MENÚ DEL CLIENTE
+==================================================
+ 1. Verificar si un número es primo
+ 2. Calcular factorial de un número
+ 3. Generar hash criptográfico (SHA-256)
+ 4. Contar palabras de un texto
+ 5. Simular procesamiento con retardo
+ 6. Ver estado y métricas del servidor
+ 7. Ejecutar demo automática de tareas
+ 0. Salir
+==================================================
+```
+
+---
+
+## 5. Pruebas Automatizadas de Concurrencia
+
+El proyecto incluye una suite formal de pruebas unitarias y de integración que verifica la concurrencia real entre múltiples clientes y el correcto funcionamiento del worker pool:
+
 ```bash
 python test_system.py
 ```
 
----
+**Salida esperada:**
+```text
+....
+----------------------------------------------------------------------
+Ran 4 tests in 1.252s
 
-## 6. Subir al Repositorio Remoto en GitHub
-
-El repositorio local ya está configurado con la rama `main` y vinculado al remoto:
-- Repositorio: `https://github.com/Animas-Ss/python-sistema-distribuido.git`
-
-Para enviar los cambios a GitHub:
-```bash
-git add .
-git commit -m "feat: reestructuracion profesional del sistema distribuido y guia didactica"
-git push -u origin main
+OK
 ```
+Demuestra que 4 clientes enviando tareas simultáneamente tardan apenas ~0.25 segundos gracias a la ejecución paralela en distintos hilos del pool.
+
